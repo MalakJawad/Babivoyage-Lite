@@ -1,6 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/services/api_client.dart';
+import '../../../../core/services/token_store.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../home/presentation/screens/home_screen.dart';
+import 'signup_screen.dart';
+import '../../../../core/config/api_config.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,7 +18,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+
   bool _obscure = true;
+  bool _loading = false;
+
+  final _auth = AuthService(
+ApiClient(ApiConfig.baseUrl),
+    TokenStore(),
+  );
 
   @override
   void dispose() {
@@ -21,12 +34,46 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+
+  Future<void> _login() async {
+    final email = _emailCtrl.text.trim();
+    final password = _passCtrl.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Please enter email and password.');
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    try {
+      await _auth.login(email: email, password: password);
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } catch (e) {
+      _showError(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final maxWidth = constraints.maxWidth > 500 ? 430.0 : constraints.maxWidth;
+          final maxWidth =
+              constraints.maxWidth > 500 ? 430.0 : constraints.maxWidth;
 
           return Center(
             child: ConstrainedBox(
@@ -39,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     fit: BoxFit.cover,
                   ),
 
-                  Container(color: Colors.black.withValues(alpha:0.28)),
+                  Container(color: Colors.black.withValues(alpha: 0.28)),
 
                   SafeArea(
                     child: SingleChildScrollView(
@@ -74,20 +121,26 @@ class _LoginScreenState extends State<LoginScreen> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(26),
                             child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                              filter:
+                                  ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                               child: Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                                padding:
+                                    const EdgeInsets.fromLTRB(18, 18, 18, 18),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha:0.18),
-                                  borderRadius: BorderRadius.circular(26),
+                                  color: Colors.white
+                                      .withValues(alpha: 0.18),
+                                  borderRadius:
+                                      BorderRadius.circular(26),
                                   border: Border.all(
-                                    color: Colors.white.withValues(alpha:0.28),
+                                    color: Colors.white
+                                        .withValues(alpha: 0.28),
                                     width: 1,
                                   ),
                                 ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
                                     const Text(
                                       'Email',
@@ -102,7 +155,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     _InputField(
                                       hint: 'Enter your email',
                                       controller: _emailCtrl,
-                                      prefix: const Icon(Icons.mail_outline, color: Colors.black54),
+                                      prefix: const Icon(
+                                          Icons.mail_outline,
+                                          color: Colors.black54),
                                       obscure: false,
                                     ),
 
@@ -121,12 +176,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                     _InputField(
                                       hint: 'Enter your password',
                                       controller: _passCtrl,
-                                      prefix: const Icon(Icons.lock_outline, color: Colors.black54),
+                                      prefix: const Icon(
+                                          Icons.lock_outline,
+                                          color: Colors.black54),
                                       obscure: _obscure,
                                       suffix: IconButton(
-                                        onPressed: () => setState(() => _obscure = !_obscure),
+                                        onPressed: () => setState(
+                                            () => _obscure = !_obscure),
                                         icon: Icon(
-                                          _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                          _obscure
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
                                           color: Colors.black54,
                                         ),
                                       ),
@@ -137,12 +197,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Align(
                                       alignment: Alignment.centerRight,
                                       child: GestureDetector(
-                                        onTap: () {
-                                        },
+                                        onTap: () {},
                                         child: Text(
                                           'Forgot Password?',
                                           style: TextStyle(
-                                            color: Colors.white.withValues(alpha:0.9),
+                                            color: Colors.white
+                                                .withValues(alpha: 0.9),
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -157,20 +217,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                       height: 54,
                                       child: ElevatedButton(
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppTheme.primary,
-                                          foregroundColor: Colors.white,
+                                          backgroundColor:
+                                              AppTheme.primary,
+                                          foregroundColor:
+                                              Colors.white,
                                           elevation: 0,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(30),
+                                          shape:
+                                              RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(
+                                                    30),
                                           ),
                                         ),
-                                        onPressed: () {
-                                        },
-                                        child: const Text(
-                                          'Log In',
-                                          style: TextStyle(
+                                        onPressed:
+                                            _loading ? null : _login,
+                                        child: Text(
+                                          _loading
+                                              ? 'Logging in...'
+                                              : 'Log In',
+                                          style: const TextStyle(
                                             fontSize: 18,
-                                            fontWeight: FontWeight.w800,
+                                            fontWeight:
+                                                FontWeight.w800,
                                           ),
                                         ),
                                       ),
@@ -179,25 +247,33 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const SizedBox(height: 14),
 
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           "Don't have an account? ",
                                           style: TextStyle(
-                                            color: Colors.white.withValues(alpha:0.85),
+                                            color: Colors.white
+                                                .withValues(alpha: 0.85),
                                             fontSize: 14,
                                           ),
                                         ),
                                         GestureDetector(
                                           onTap: () {
-                                          
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      const SignUpScreen()),
+                                            );
                                           },
                                           child: const Text(
                                             'Sign Up',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 14,
-                                              fontWeight: FontWeight.w800,
+                                              fontWeight:
+                                                  FontWeight.w800,
                                             ),
                                           ),
                                         ),
@@ -244,7 +320,7 @@ class _InputField extends StatelessWidget {
     return Container(
       height: 52,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha:0.85),
+        color: Colors.white.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(16),
       ),
       alignment: Alignment.center,
@@ -254,11 +330,13 @@ class _InputField extends StatelessWidget {
         style: const TextStyle(fontSize: 15),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: TextStyle(color: Colors.black.withValues(alpha:0.45)),
+          hintStyle: TextStyle(
+              color: Colors.black.withValues(alpha: 0.45)),
           prefixIcon: prefix,
           suffixIcon: suffix,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14, vertical: 14),
         ),
       ),
     );

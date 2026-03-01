@@ -24,5 +24,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+
   assets:
     - assets/images/welcome_bg.png
+    - assets/images/dest_paris.jpg
+    - assets/images/dest_tokyo.jpg
+    - assets/images/dest_miami.jpg
+    - assets/images/dest_rome.jpg
+    - assets/images/airplane_top.jpg

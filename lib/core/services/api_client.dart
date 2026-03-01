@@ -3,42 +3,75 @@ import 'package:http/http.dart' as http;
 
 class ApiClient {
   final String baseUrl;
-
   ApiClient(this.baseUrl);
 
-  Future<Map<String, dynamic>> post(
+  Uri _u(String path, [Map<String, String>? q]) =>
+      Uri.parse('$baseUrl$path').replace(queryParameters: q);
+
+  Map<String, String> _mergeHeaders(Map<String, String>? extra) {
+    return {
+      'Accept': 'application/json',
+      if (extra != null) ...extra,
+    };
+  }
+
+  Future<Map<String, dynamic>> get(
     String path, {
-    Map<String, dynamic>? body,
+    Map<String, String>? query,
     Map<String, String>? headers,
   }) async {
-    final uri = Uri.parse('$baseUrl$path');
-
-    final res = await http.post(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...?headers,
-      },
-      body: jsonEncode(body ?? {}),
+    final r = await http.get(
+      _u(path, query),
+      headers: _mergeHeaders(headers),
     );
+    return _handle(r);
+  }
 
-    Map<String, dynamic> data = {};
-    try {
-      data = jsonDecode(res.body) as Map<String, dynamic>;
-    } catch (_) {}
+  Future<Map<String, dynamic>> post(
+    String path,
+    Map<String, dynamic> data, {
+    Map<String, String>? headers,
+  }) async {
+    final allHeaders = _mergeHeaders({
+      'Content-Type': 'application/json',
+      if (headers != null) ...headers,
+    });
 
-    if (res.statusCode >= 400) {
-     
-      if (data['errors'] is Map) {
-        final errors = data['errors'] as Map;
-        final firstKey = errors.keys.first;
-        final firstMsg = (errors[firstKey] as List).first.toString();
-        throw Exception(firstMsg);
+    final r = await http.post(
+      _u(path),
+      headers: allHeaders,
+      body: jsonEncode(data),
+    );
+    return _handle(r);
+  }
+
+  Future<Map<String, dynamic>> delete(
+    String path, {
+    Map<String, String>? headers,
+  }) async {
+    final r = await http.delete(
+      _u(path),
+      headers: _mergeHeaders(headers),
+    );
+    return _handle(r);
+  }
+
+  Map<String, dynamic> _handle(http.Response r) {
+    final body = r.body.isEmpty ? {} : jsonDecode(r.body);
+
+    final map = body is Map<String, dynamic> ? body : {'data': body};
+
+    if (r.statusCode < 200 || r.statusCode >= 300) {
+      if (map['message'] != null) throw Exception(map['message'].toString());
+
+      if (map['errors'] is Map) {
+        final errors = (map['errors'] as Map).values.expand((v) => v as List).toList();
+        if (errors.isNotEmpty) throw Exception(errors.first.toString());
       }
-      throw Exception(data['message']?.toString() ?? 'Request failed');
+
+      throw Exception('Request failed (${r.statusCode})');
     }
 
-    return data;
+    return map;
   }
 }
